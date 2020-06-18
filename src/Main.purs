@@ -2,6 +2,7 @@ module Main where
 
 import Prelude
 
+import Data.Array.NonEmpty (NonEmptyArray)
 import Data.HashMap (HashMap, empty, singleton)
 import Data.NonEmpty (NonEmpty(..))
 import Data.String (length)
@@ -18,14 +19,16 @@ newtype GraphQLQuery = GraphQLQuery {
   operationName :: String
 }
 
-myAwesomeQueryGenerator :: Gen String
-myAwesomeQueryGenerator = do
-  myCommand <- oneOf $ NonEmpty (pure "foo") (map pure ["bar", "baz"])
+type SimpleGraphQLSchema = NonEmpty Array String
+
+myAwesomeQueryGenerator :: SimpleGraphQLSchema -> Gen String
+myAwesomeQueryGenerator schema = do
+  myCommand <- oneOf $ map pure schema
   pure ("query { " <> myCommand <> " }")
 
-genGraphQLQuery1 :: Gen GraphQLQuery
-genGraphQLQuery1 = do
-  query <- myAwesomeQueryGenerator
+genGraphQLQuery1 :: SimpleGraphQLSchema -> Gen GraphQLQuery
+genGraphQLQuery1 schema = do
+  query <- myAwesomeQueryGenerator schema
   variables <- pure (singleton "foo" "bar")
   operationName <- arbitrary
   pure $ GraphQLQuery { operationName, variables, query }
@@ -44,5 +47,5 @@ genGraphQlQueryTest mGen = do
 
 main :: Effect Unit
 main = do
-  let result = quickCheckPure (mkSeed 0) 100 (genGraphQlQueryTest genGraphQLQuery1)
+  let result = quickCheckPure (mkSeed 0) 100 (genGraphQlQueryTest (genGraphQLQuery1 (NonEmpty "a" ["b", "c"])))
   log $ show result
